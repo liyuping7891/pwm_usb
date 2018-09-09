@@ -50,3 +50,14 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+*.crf
+*.lnp
+*.simuinput
+*.sct
+*.dep
+*.htm
+*.lst
+*.Administrator
+*.dbgconf
+JLinkLog.txt
+JLinkLog.txt
