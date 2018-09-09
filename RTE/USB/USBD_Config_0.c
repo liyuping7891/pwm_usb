@@ -71,11 +71,11 @@
 
 //     <s.126>Manufacturer String
 //     <i>String Descriptor describing Manufacturer.
-#define USBD0_STR_DESC_MAN              L"Keil Software"
+#define USBD0_STR_DESC_MAN              L"www.xree.cr"
 
 //     <s.126>Product String
 //     <i>String Descriptor describing Product.
-#define USBD0_STR_DESC_PROD             L"Keil USB Device"
+#define USBD0_STR_DESC_PROD             L"pwm_control_based_usb"
 
 //     <e.0>Serial Number String
 //     <i>Enable Serial Number String.

@@ -30,15 +30,14 @@
 #include <string.h>
 #include "rl_usb.h"
 #include "Driver_USBD.h"
- 
+#include "thread.h"
  
 // Variable declaration
 static bool     data_received, send_active;
 static uint32_t data_len_received;
 static uint16_t bulk_max_packet_size;
-static uint8_t  bulk_out_buf[512];
 static uint8_t  bulk_in_buf [512];
- 
+static uint8_t  bulk_out_buf[512];
  
 // \brief Callback function called during USBD_Initialize to initialize the USB Custom class instance
 void USBD_CustomClass0_Initialize (void) {
@@ -93,13 +92,18 @@ void USBD_CustomClass0_Endpoint1_Event  (uint32_t event) {
   if (event & ARM_USBD_EVENT_IN) {      // IN event
     send_active = false;
   }
+  
   if (event & ARM_USBD_EVENT_OUT) {     // OUT event
     data_len_received = USBD_EndpointReadGetResult(0U, USB_ENDPOINT_OUT(1));
     data_received     = true;
   }
+  
   if ((data_received) && (!send_active)) {
     // Copy received data bytes to transmit buffer
     memcpy((void *)bulk_in_buf, (void *)bulk_out_buf, data_len_received);
+    
+    memcpy((void *)bulk_in_buf, (void *)buf_from_usb, 64);
+    osThreadFlagsSet(tid_parse_cmd, GOT_DATA_FROM_USB);
 
     // Transmit back data bytes
     send_active = true;

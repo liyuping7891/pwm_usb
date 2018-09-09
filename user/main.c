@@ -61,9 +61,9 @@ int main (void) {
   osThreadNew(tb, NULL, NULL);    // Create application main thread
   osThreadNew(tc, NULL, NULL);    // Create application main thread
   init_pwm_thread();
-  init_pwm_wakeup_thread();
-//  init_usb_ctl_pwm_thread();
-  osThreadNew(app_main, NULL, &app_main_attr);
+  init_usb_thread();
+  init_parse_cmd_thread();
+  init_freq_gen_thread();
   
   osKernelStart();                      // Start thread execution
   for (;;) {}

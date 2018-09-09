@@ -311,7 +311,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>1</Optim>
+            <Optim>4</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>0</OneElfS>
@@ -337,7 +337,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F103xE, USE_HAL_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>.\user;.\firmware\inc;.\firmware\inc\Legacy</IncludePath>
+              <IncludePath>.\user;.\firmware\inc;.\firmware\inc\Legacy;.\rtt</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -410,11 +410,6 @@
               <FileName>USBD_User_CustomClass_0.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\user\USBD_User_CustomClass_0.c</FilePath>
-            </File>
-            <File>
-              <FileName>WinUSB_Echo.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\user\WinUSB_Echo.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -524,6 +519,21 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>rtt</GroupName>
+          <Files>
+            <File>
+              <FileName>SEGGER_RTT.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\rtt\SEGGER_RTT.c</FilePath>
+            </File>
+            <File>
+              <FileName>SEGGER_RTT_printf.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\rtt\SEGGER_RTT_printf.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>::CMSIS</GroupName>
         </Group>
         <Group>
@@ -582,7 +592,7 @@
           <targetInfo name="rtx5simu"/>
         </targetInfos>
       </component>
-      <component Capiversion="2.1.2" Cclass="CMSIS" Cgroup="RTOS2" Csub="Keil RTX5" Cvariant="Source" Cvendor="ARM" Cversion="5.3.0" condition="RTOS2 RTX5">
+      <component Capiversion="2.1.2" Cclass="CMSIS" Cgroup="RTOS2" Csub="Keil RTX5" Cvariant="Library" Cvendor="ARM" Cversion="5.3.0" condition="RTOS2 RTX5 Lib">
         <package name="CMSIS" schemaVersion="1.3" url="http://www.keil.com/pack/" vendor="ARM" version="5.3.0"/>
         <targetInfos>
           <targetInfo name="rtx5simu"/>
@@ -594,7 +604,7 @@
           <targetInfo name="rtx5simu"/>
         </targetInfos>
       </component>
-      <component Cbundle="MDK-Plus" Cclass="USB" Cgroup="CORE" Cvariant="Debug" Cvendor="Keil" Cversion="6.12.8" condition="USB Core and Event Recorder">
+      <component Cbundle="MDK-Plus" Cclass="USB" Cgroup="CORE" Cvariant="Release" Cvendor="Keil" Cversion="6.12.8" condition="USB Core">
         <package name="MDK-Middleware" schemaVersion="1.4" url="http://www.keil.com/pack/" vendor="Keil" version="7.7.0"/>
         <targetInfos>
           <targetInfo name="rtx5simu"/>
@@ -646,7 +656,7 @@
     <files>
       <file attr="config" category="source" name="CMSIS\RTOS2\RTX\Config\RTX_Config.c" version="5.1.0">
         <instance index="0">RTE\CMSIS\RTX_Config.c</instance>
-        <component Capiversion="2.1.2" Cclass="CMSIS" Cgroup="RTOS2" Csub="Keil RTX5" Cvariant="Source" Cvendor="ARM" Cversion="5.3.0" condition="RTOS2 RTX5"/>
+        <component Capiversion="2.1.2" Cclass="CMSIS" Cgroup="RTOS2" Csub="Keil RTX5" Cvariant="Library" Cvendor="ARM" Cversion="5.3.0" condition="RTOS2 RTX5 Lib"/>
         <package name="CMSIS" schemaVersion="1.3" url="http://www.keil.com/pack/" vendor="ARM" version="5.3.0"/>
         <targetInfos>
           <targetInfo name="rtx5simu"/>
@@ -654,7 +664,7 @@
       </file>
       <file attr="config" category="header" name="CMSIS\RTOS2\RTX\Config\RTX_Config.h" version="5.3.0">
         <instance index="0">RTE\CMSIS\RTX_Config.h</instance>
-        <component Capiversion="2.1.2" Cclass="CMSIS" Cgroup="RTOS2" Csub="Keil RTX5" Cvariant="Source" Cvendor="ARM" Cversion="5.3.0" condition="RTOS2 RTX5"/>
+        <component Capiversion="2.1.2" Cclass="CMSIS" Cgroup="RTOS2" Csub="Keil RTX5" Cvariant="Library" Cvendor="ARM" Cversion="5.3.0" condition="RTOS2 RTX5 Lib"/>
         <package name="CMSIS" schemaVersion="1.3" url="http://www.keil.com/pack/" vendor="ARM" version="5.3.0"/>
         <targetInfos>
           <targetInfo name="rtx5simu"/>

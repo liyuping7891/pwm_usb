@@ -20,7 +20,6 @@
         #define RTE_CMSIS_RTOS_RTX5             /* CMSIS-RTOS Keil RTX5 */
 #define RTE_CMSIS_RTOS2                 /* CMSIS-RTOS2 */
         #define RTE_CMSIS_RTOS2_RTX5            /* CMSIS-RTOS2 Keil RTX5 */
-        #define RTE_CMSIS_RTOS2_RTX5_SOURCE     /* CMSIS-RTOS2 Keil RTX5 Source */
 #define RTE_Compiler_EventRecorder
           #define RTE_Compiler_EventRecorder_DAP
 #define RTE_Drivers_USART1              /* Driver USART1 */
@@ -30,7 +29,7 @@
         #define RTE_Drivers_USART5              /* Driver UART5  */
 #define RTE_Drivers_USBD0               /* Driver USBD0 */
 #define RTE_USB_Core                    /* USB Core */
-          #define RTE_USB_Core_Debug              /* USB Core Debug Version */
+          #define RTE_USB_Core_Release            /* USB Core Release Version */
 #define RTE_USB_Device_0                /* USB Device 0 */
 #define RTE_USB_Device_CustomClass_0    /* USB Device Custom Class instance 0 */
 

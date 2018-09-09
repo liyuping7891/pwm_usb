@@ -8,47 +8,35 @@
   * 2. ***
   *
   ******************************************************************************
-  */
-  
-#include <stdlib.h>
-#include <string.h>
-
-#include "stm32f1xx_hal.h"
-#include "cmsis_os2.h"
-#include "hal_main.h"
-
+  */  
 #include "thread.h"
-#include "Driver_USART.h"
   
 /*----------------------------------------------------------------------------
- *      Event Flags
+ *  static function
+ *  static variable
  *---------------------------------------------------------------------------*/
-osEventFlagsId_t os_evt_got_control;
+osThreadId_t tid_Thread;
+osThreadId_t tid_key_parse;
+osThreadId_t tid_pwm_process;
+osThreadId_t tid_pwm_wakeup;
+osThreadId_t tid_usb_process;
+osThreadId_t tid_usart2_ctl_pwm;
+osThreadId_t tid_parse_cmd;
+osThreadId_t tid_freq_gen;
 
-/*----------------------------------------------------------------------------
- *      Thread Flags
- *---------------------------------------------------------------------------*/
-#define THREAD_FLAG_PWM_CHANGE    0x0001
- 
+CMD_PWM_FROM_USB  cmd_buf_pwm_dac[MAX_PWM_CH];
+uint16_t          duty_buf[MAX_PWM_CH];
+CMD_FREQ_FROM_USB cmd_buf_freq[MAX_FREQ_CH]; 
+
+uint8_t buf_from_usb[64];
+
 /*----------------------------------------------------------------------------
  *      Thread 1 'Thread_Name': Sample thread
  *---------------------------------------------------------------------------*/
-osThreadId_t tid_Thread;                                      // thread id
- 
-void Thread (void *argument) {
-  
-}
-int Init_Thread (void) {
-  return 0;
-}
 
 /*----------------------------------------------------------------------------
- *      Thread 2
- *      key_parse:
- *      parse input from USART or USB
+ *      Thread 2 'key_parse': parse input from USART or USB
  *---------------------------------------------------------------------------*/
-osThreadId_t tid_key_parse;
- 
 void key_parse(void *argument) {
  
   while (1) {
@@ -70,10 +58,9 @@ int init_key_parse_thread (void) {
  *      2. non-sync mode: only 1 output channel change 
  *      implement only 1st mode for now
  *---------------------------------------------------------------------------*/
-osThreadId_t tid_pwm_process;
-
 void pwm_process (void *argument) {
-
+  uint8_t i;
+  
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
@@ -86,26 +73,46 @@ void pwm_process (void *argument) {
   
   while (1) {
     ; // Insert thread code here...
-    osThreadFlagsWait(THREAD_FLAG_PWM_CHANGE, osFlagsWaitAny, osWaitForever);
+    osThreadFlagsWait(PWM_CTL_THROUGH_USB_CONFIRM, osFlagsWaitAny, osWaitForever);
     
-    TIM2->CCR1 += 1;
-    TIM2->CCR1 %= 17578;
-    TIM2->CCR2 += 2;
-    TIM2->CCR2 %= 17578;
-    TIM2->CCR3 += 4;
-    TIM2->CCR3 %= 17578;
-    TIM2->CCR4 += 8;
-    TIM2->CCR4 %= 17578;
-    TIM3->CCR1 += 1;
-    TIM3->CCR1 %= 17578;
-    TIM3->CCR2 += 4;
-    TIM3->CCR2 %= 17578;
-    TIM3->CCR3 += 16;
-    TIM3->CCR3 %= 17578;
-    TIM3->CCR4 += 64;
-    TIM3->CCR4 %= 17578;   
-  
-    osThreadYield();    
+    for(i = 0; i < MAX_PWM_CH; i++)
+    {
+      if(cmd_buf_pwm_dac[i].change == true)
+      {
+        duty_buf[i] %= PWM_PERIOD;
+        switch(i)
+        {
+          case PWM_CH1: 
+            TIM2->CCR1 = duty_buf[i];
+            break;
+          case PWM_CH2:
+            TIM2->CCR2 = duty_buf[i];
+            break;
+          case PWM_CH3:
+            TIM2->CCR3 = duty_buf[i];
+            break;
+          case PWM_CH4:
+            TIM2->CCR4 = duty_buf[i];
+            break;
+          case PWM_CH5:
+            TIM2->CCR1 = duty_buf[i];
+            break;
+          case PWM_CH6:
+            TIM3->CCR2 = duty_buf[i];
+            break;
+          case PWM_CH7:
+            TIM3->CCR3 = duty_buf[i];
+            break;
+          case PWM_CH8:
+            TIM3->CCR4 = duty_buf[i];
+            break;
+          default:
+            break;
+        }
+      }else{
+        ;
+      }
+    }
   }
 }
 
@@ -118,48 +125,28 @@ int init_pwm_thread (void) {
 }
  
 /*----------------------------------------------------------------------------
- *      Thread 4
- *      wakeup pwm process
+*      Thread 4 : wakeup pwm process
  *---------------------------------------------------------------------------*/
-osThreadId_t tid_pwm_wakeup;
- 
-void pwm_wakeup (void *argument) {
-  
-  while (1) {
-    osThreadFlagsSet(tid_pwm_process, THREAD_FLAG_PWM_CHANGE);
-    osThreadYield();
-  }
-}
-
-int init_pwm_wakeup_thread (void) {
- 
-  tid_pwm_wakeup = osThreadNew (pwm_wakeup, NULL, NULL);
-  if (!tid_pwm_wakeup) return(-1);
-  
-  return(0);
-}
 
 /*----------------------------------------------------------------------------
  *      Thread 5
  *      pwm control using usb process
  *---------------------------------------------------------------------------*/
-extern void USBD_CustomClass0_Initialize(void);
-osThreadId_t tid_usb_ctl_pwm;
-
-void usb_ctl_pwm (void *argument) {
+void usb_process(void *argument) {
   
-  USBD_CustomClass0_Initialize();
+  USBD_Initialize(0);
+  USBD_Connect(0);
   
   while (1) {
-    //osThreadFlagsSet(tid_pwm_process, THREAD_FLAG_PWM_CHANGE);
+    ;
     osThreadYield();
   }
 }
 
-int init_usb_ctl_pwm_thread (void) {
+int init_usb_thread (void) {
  
-  tid_usb_ctl_pwm = osThreadNew (usb_ctl_pwm, NULL, NULL);
-  if (!tid_usb_ctl_pwm) return(-1);
+  tid_usb_process = osThreadNew (usb_process, NULL, NULL);
+  if (!tid_usb_process) return(-1);
   
   return(0);
 }
@@ -168,69 +155,11 @@ int init_usb_ctl_pwm_thread (void) {
  *      Thread 6
  *      pwm control using USART2
  *---------------------------------------------------------------------------*/
-#define THREAD_FLAG_INTRA_FRAME_MB  0x02
-
-//extern ARM_DRIVER_USART Driver_USART1;
-extern ARM_DRIVER_USART Driver_USART2;
-//extern ARM_DRIVER_USART Driver_USART3;
-//extern ARM_DRIVER_USART Driver_USART4;
-//extern ARM_DRIVER_USART Driver_USART5;
-
-osThreadId_t tid_usart2_ctl_pwm;
-
-static void mbTimeoutCallback(void *argument) {
-  int32_t arg = (int32_t)argument;
-  
-  osThreadFlagsSet(tid_usart2_ctl_pwm, THREAD_FLAG_INTRA_FRAME_MB);
-}
-
-static void cb_myUSART(uint32_t event)
-{
-  uint32_t mask;
-  mask = ARM_USART_EVENT_RECEIVE_COMPLETE  |
-         ARM_USART_EVENT_TRANSFER_COMPLETE |
-         ARM_USART_EVENT_SEND_COMPLETE     |
-         ARM_USART_EVENT_TX_COMPLETE       ;
-  if (event & mask) {
-    /* Success: Wakeup Thread */
-    //osSignalSet(tid_myUART_Thread, 0x01);
-  }
-  if (event & ARM_USART_EVENT_RX_TIMEOUT) {
-    //__breakpoint(0);  /* Error: Call debugger or replace with custom error handling */
-  }
-  if (event & (ARM_USART_EVENT_RX_OVERFLOW | ARM_USART_EVENT_TX_UNDERFLOW)) {
-    //__breakpoint(0);  /* Error: Call debugger or replace with custom error handling */
-  }  
-}
- 
 void usart2_ctl_pwm (void *argument) {
-  int32_t status = ARM_DRIVER_OK; 
-  uint8_t cmd[120]; // format: "CH"+num(01-16, 2bytes)+value(0000-4095, 4bytes)
-  osTimerId_t  timer_id_mbTimeout;
-  
-  Driver_USART2.Initialize(cb_myUSART);
-  Driver_USART2.PowerControl(ARM_POWER_FULL);
-  status = Driver_USART2.Control(ARM_USART_MODE_ASYNCHRONOUS | 
-                                 ARM_USART_DATA_BITS_8 | 
-                                 ARM_USART_PARITY_NONE | 
-                                 ARM_USART_STOP_BITS_1 | 
-                                 ARM_USART_FLOW_CONTROL_NONE, 115200);
-  // identical with above settings (default settings removed)
-  // configure to UART mode: 8 bits, no parity, 1 stop bit, flow control, 115200 bps
-  status = Driver_USART2.Control(ARM_USART_MODE_ASYNCHRONOUS, 115200);
-  // enable TX output
-  status = Driver_USART2.Control(ARM_USART_CONTROL_TX, 1);
-  // enable RX output
-  status = Driver_USART2.Control(ARM_USART_CONTROL_RX, 1);
-  
-  while (1) {
-    Driver_USART2.Send("Please input new value:\n\r",30);
-    timer_id_mbTimeout = osTimerNew(mbTimeoutCallback, osTimerPeriodic, (void *)5, NULL);
-    osTimerStart(timer_id_mbTimeout, 5);
-    osThreadFlagsWait(THREAD_FLAG_INTRA_FRAME_MB, osFlagsWaitAll, osWaitForever);
     
-    Driver_USART2.Receive(cmd, 120);
-      
+  while (1) {
+    ;
+    osThreadYield();       
   }
 }
 
@@ -242,4 +171,101 @@ int init_usart2_ctl_pwm_thread (void) {
   return(0);
 }
 
+/*----------------------------------------------------------------------------
+ *  Thread 7
+ *  parse cmd from usb
+ *---------------------------------------------------------------------------*/
+static void parse_cmd(void *argument)
+{
+  uint8_t i, j, k;
+  uint8_t cmd_type;
+  
+  while(1)
+  {
+    osThreadFlagsWait(GOT_DATA_FROM_USB, osFlagsWaitAny, osWaitForever);
+    
+    cmd_type = buf_from_usb[0];
+    
+    if((cmd_type ^ PWM_GEN_CMD) == 0)
+    {
+      duty_buf[0] = TIM2->CCR1;
+      duty_buf[1] = TIM2->CCR2;
+      duty_buf[2] = TIM2->CCR3;
+      duty_buf[3] = TIM2->CCR4;
+      duty_buf[4] = TIM3->CCR1;
+      duty_buf[5] = TIM3->CCR2;
+      duty_buf[6] = TIM3->CCR3;
+      duty_buf[7] = TIM3->CCR4;
+      
+      for(i = 0; i < MAX_PWM_CH; i++)
+      {
+        j = buf_from_usb[3 * i + 1] & 0xC0;
+        k = (buf_from_usb[3 * i + 1] & 0x30) >> 4;
+        
+        switch(j)
+        {
+          case PWM_RETAIN:
+            cmd_buf_pwm_dac[i].change = false;
+          case PWM_FIXED:
+            cmd_buf_pwm_dac[i].change = true;
+            duty_buf[i] = buf_from_usb[3 * i + 1]
+                          + buf_from_usb[3 * i + 2] * 256;
+            break;
+          case PWM_INCREMETE:
+            cmd_buf_pwm_dac[i].change = true;
+            duty_buf[i] += 10 ^ k;
+            break;
+          case PWM_DECREMENT:
+            cmd_buf_pwm_dac[i].change = true;
+            duty_buf[i] -= 10 ^ k;
+            break;
+          default:
+            break;
+        }
+      }       
+      osThreadFlagsSet(tid_pwm_process, PWM_CTL_THROUGH_USB_CONFIRM); 
+    }
+    else if((cmd_type ^ FREQ_GEN_CMD) == 0)
+    {
+      
+      osThreadFlagsSet(tid_freq_gen, FREQ_CTL_THROUGH_USB_CONFIRM);
+    }
+    else
+    {
+      // reserve for more commands
+    }
+  }
+}
+    
+int init_parse_cmd_thread (void) {
+ 
+  tid_parse_cmd = osThreadNew (parse_cmd, NULL, NULL);
+  if (!tid_parse_cmd) return(-1);
+  
+  return(0);
+}
+
+
+/*----------------------------------------------------------------------------
+ *  Thread 8, freq_gen: output 2.85-3.65Hz adjustable pwm
+ *---------------------------------------------------------------------------*/
+static void freq_gen(void *argument)
+{
+  uint8_t i, j, k;
+  
+  while(1)
+  {
+    osThreadFlagsWait(FREQ_CTL_THROUGH_USB_CONFIRM, osFlagsWaitAny, osWaitForever);
+    
+    
+  }
+}
+    
+int init_freq_gen_thread (void) {
+ 
+  tid_freq_gen = osThreadNew (freq_gen, NULL, NULL);
+  if (!tid_freq_gen) return(-1);
+  
+  return(0);
+}
 

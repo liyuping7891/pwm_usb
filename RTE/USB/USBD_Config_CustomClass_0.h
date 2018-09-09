@@ -814,7 +814,7 @@
 //       <e.0>Interface String Enable
 //       <i>Enable Interface String.
 //       <i>If disabled Interface String will not be assigned to USB Device Custom Class Interface 0.
-#define USBD_CUSTOM_CLASS0_IF0_STR_EN                              0
+#define USBD_CUSTOM_CLASS0_IF0_STR_EN                              1
 
 //         <s.126>Interface String
 #define USBD_CUSTOM_CLASS0_IF0_STR                                 L"USB_CUSTOM_CLASS0_IF0"
