@@ -27,26 +27,21 @@
 #include "Driver_USART.h"
 #include "rl_usb.h"
 
-#define GOT_DATA_FROM_USB 0x01
+#include "SEGGER_RTT.h"
 
 /* Private define ------------------------------------------------------------*/
-
+#define GOT_DATA_FROM_USB 0x01
+extern uint8_t buf_from_usb[];
 
 /*----------------------------------------------------------------------------
  *  Thread 3
  *---------------------------------------------------------------------------*/
+extern ARM_DRIVER_USART Driver_USART1;
+
 #define PWM_CTL_THROUGH_USB_CONFIRM     0x0001
 #define PWM_CTL_THROUGH_USART_CONFIRM   0x0002
 
 #define PWM_PERIOD                      17578
-
-/*----------------------------------------------------------------------------
- *  Thread 7
- *---------------------------------------------------------------------------*/
-#define PARSE_CMD  0x00000001
-
-#define PWM_GEN_CMD     0x01
-#define FREQ_GEN_CMD    0x12
 
 #define PWM_RETAIN      0x00
 #define PWM_FIXED       0x40
@@ -74,20 +69,52 @@ typedef struct {
   uint16_t  val;
 } CMD_PWM_FROM_USB;
 
-extern uint8_t buf_from_usb[];
+/*----------------------------------------------------------------------------
+ *  Thread 7
+ *---------------------------------------------------------------------------*/
+#define PARSE_CMD  0x00000001
 
-//usb_cmd format:
-//selector + PWM_VAL 
-//1 byte     2 bytes
-//selector:
+#define PWM_GEN_CMD     0x01
+#define FREQ_GEN_CMD    0x12
+
+// pwm_usb_cmd on bus:
+// dest +   selector + PWM_VAL  ...  selector + PWM_VAL 
+// 1 byte   1 byte     2 bytes  ...  1 byte     2 bytes
+// dest:
+//    0x01: PWM_GEN_CMD
+//    0x12: FREQ_GEN_CMD
+//    other: reserved  
+// selector:
 //    bit[7:6]: 00-value retian, 
 //              01-value fixed
 //              10-increment with delta
 //              11-decrement with delta
-//    bit[5:4]: delta, 00-1, 01-10, 02-100, 03-1000
+//    bit[5:4]: delta, 
+//              00 - 1, 
+//              01 - 10,
+//              10 - 100,
+//              11 - 1000
 //    bit[3:0]: pwm channel, 1 - 8 channel,
 //              PWM_CH[1-4]-->TIM2_PWM_CH[1-4], 
 //              PWM_CH[5-8]-->TIM3_PWM_CH[1-4],
+
+// freq_usb_cmd on bus:
+// dest +   channel + location + duty
+// 1 byte   1 byte    2 bytes    2 bytes
+// dest:
+//    0x01: PWM_GEN_CMD
+//    0x12: FREQ_GEN_CMD
+//    other: reserved  
+// channel:
+//    0x00: FREQ_GEN_CH_1
+//    0x01: FREQ_GEN_CH_2
+//    0x02: FREQ_GEN_CH_3
+//    other: reserved  
+// location:
+//    new freq update start point
+// duty:
+//    duty cycle
+
 
 /*----------------------------------------------------------------------------
  *  Thread 8
@@ -108,7 +135,6 @@ typedef struct {
 
 // Extenal declaration
 extern osThreadId_t tid_parse_cmd;
-extern  uint8_t  bulk_out_buf[];
 
 #ifdef __cplusplus
  extern "C" {
@@ -125,6 +151,9 @@ int init_usart2_ctl_pwm_thread (void);
 int init_parse_cmd_thread (void);
 
 int init_freq_gen_thread(void);
+
+int init_tty_thread (void);
+
 
 #ifdef __cplusplus
 }

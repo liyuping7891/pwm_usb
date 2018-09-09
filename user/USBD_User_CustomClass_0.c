@@ -102,7 +102,7 @@ void USBD_CustomClass0_Endpoint1_Event  (uint32_t event) {
     // Copy received data bytes to transmit buffer
     memcpy((void *)bulk_in_buf, (void *)bulk_out_buf, data_len_received);
     
-    memcpy((void *)bulk_in_buf, (void *)buf_from_usb, 64);
+    memcpy((void *)buf_from_usb, (void *)bulk_out_buf, 64);
     osThreadFlagsSet(tid_parse_cmd, GOT_DATA_FROM_USB);
 
     // Transmit back data bytes

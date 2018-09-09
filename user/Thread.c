@@ -23,6 +23,7 @@ osThreadId_t tid_usb_process;
 osThreadId_t tid_usart2_ctl_pwm;
 osThreadId_t tid_parse_cmd;
 osThreadId_t tid_freq_gen;
+osThreadId_t tid_tty;
 
 CMD_PWM_FROM_USB  cmd_buf_pwm_dac[MAX_PWM_CH];
 uint16_t          duty_buf[MAX_PWM_CH];
@@ -41,6 +42,8 @@ void key_parse(void *argument) {
  
   while (1) {
     ; // Insert thread code here...
+    //Driver_USART1.Send("Now Thread 1!!\r\n", 21);
+    osThreadYield();
   }
 }
 
@@ -74,6 +77,10 @@ void pwm_process (void *argument) {
   while (1) {
     ; // Insert thread code here...
     osThreadFlagsWait(PWM_CTL_THROUGH_USB_CONFIRM, osFlagsWaitAny, osWaitForever);
+    Driver_USART1.Send("Now Thread ---> 3.\r\n", 21);
+    Driver_USART1.Send("Got pwm ctl request.\r\n", 30);
+    Driver_USART1.Send("\r\n", 5);
+    osThreadFlagsSet(tid_tty, 0x01);
     
     for(i = 0; i < MAX_PWM_CH; i++)
     {
@@ -113,6 +120,8 @@ void pwm_process (void *argument) {
         ;
       }
     }
+    
+    osThreadYield();
   }
 }
 
@@ -134,9 +143,9 @@ int init_pwm_thread (void) {
  *---------------------------------------------------------------------------*/
 void usb_process(void *argument) {
   
-  USBD_Initialize(0);
-  USBD_Connect(0);
-  
+//  USBD_Initialize(0);
+//  USBD_Connect(0);
+
   while (1) {
     ;
     osThreadYield();
@@ -159,7 +168,7 @@ void usart2_ctl_pwm (void *argument) {
     
   while (1) {
     ;
-    osThreadYield();       
+    osThreadYield();  
   }
 }
 
@@ -184,8 +193,15 @@ static void parse_cmd(void *argument)
   {
     osThreadFlagsWait(GOT_DATA_FROM_USB, osFlagsWaitAny, osWaitForever);
     
-    cmd_type = buf_from_usb[0];
+    Driver_USART1.Send("Now Thread -------> 7.\r\n", 30);    
+    Driver_USART1.Send("Got USB Request\r\n", 21);    
+    Driver_USART1.Send("\r\n", 5);
     
+    cmd_type = buf_from_usb[0];
+//    SEGGER_RTT_printf(0,"Here is the cmd:\n");
+//    SEGGER_RTT_Write(0, buf_from_usb, 24 + 1);
+//    SEGGER_RTT_printf(0,"\n");
+        
     if((cmd_type ^ PWM_GEN_CMD) == 0)
     {
       duty_buf[0] = TIM2->CCR1;
@@ -234,6 +250,8 @@ static void parse_cmd(void *argument)
     {
       // reserve for more commands
     }
+    
+    osThreadYield();
   }
 }
     
@@ -251,13 +269,15 @@ int init_parse_cmd_thread (void) {
  *---------------------------------------------------------------------------*/
 static void freq_gen(void *argument)
 {
-  uint8_t i, j, k;
+//  uint8_t i, j, k;
   
   while(1)
   {
     osThreadFlagsWait(FREQ_CTL_THROUGH_USB_CONFIRM, osFlagsWaitAny, osWaitForever);
     
+    Driver_USART1.Send("Now Thread --------> 8.\r\n", 30);
     
+    osThreadYield();
   }
 }
     
@@ -268,4 +288,86 @@ int init_freq_gen_thread (void) {
   
   return(0);
 }
+
+/*----------------------------------------------------------------------------
+ *  Thread 9, usart1 used for terminal output
+ *---------------------------------------------------------------------------*/
+void myUSART_callback(uint32_t event)
+{
+  uint32_t mask;
+  mask = ARM_USART_EVENT_RECEIVE_COMPLETE  |
+         ARM_USART_EVENT_TRANSFER_COMPLETE |
+         ARM_USART_EVENT_SEND_COMPLETE     |
+         ARM_USART_EVENT_TX_COMPLETE       ;
+  if (event & mask) {
+    /* Success: Wakeup Thread */
+  }
+  
+  if (event & ARM_USART_EVENT_RX_TIMEOUT) {
+    //__breakpoint(0);  /* Error: Call debugger or replace with custom error handling */
+  }
+  
+  if (event & (ARM_USART_EVENT_RX_OVERFLOW | ARM_USART_EVENT_TX_UNDERFLOW)) {
+    //__breakpoint(0);  /* Error: Call debugger or replace with custom error handling */
+  }
+}
+
+static void tty(void *argument)
+{
+  static
+    ARM_DRIVER_USART      *USARTdrv = &Driver_USART1;
+//  ARM_DRIVER_VERSION      version;
+//  ARM_USART_CAPABILITIES  drv_capabilities;
+//  char                    cmd;
+
+  #ifdef DEBUG
+  version = USARTdrv->GetVersion();
+  if (version.api < 0x200)   /* requires at minimum API version 2.00 or higher */
+  {                          /* error handling */
+      return;
+  }
+  drv_capabilities = USARTdrv->GetCapabilities();
+  if (drv_capabilities.event_tx_complete == 0)
+  {                          /* error handling */
+      return;
+  }
+  #endif
+
+  /*Initialize the USART driver */
+  USARTdrv->Initialize(myUSART_callback);
+  /*Power up the USART peripheral */
+  USARTdrv->PowerControl(ARM_POWER_FULL);
+  /*Configure the USART to 4800 Bits/sec */
+  USARTdrv->Control(ARM_USART_MODE_ASYNCHRONOUS |
+                    ARM_USART_DATA_BITS_8 |
+                    ARM_USART_PARITY_NONE |
+                    ARM_USART_STOP_BITS_1 |
+                    ARM_USART_FLOW_CONTROL_NONE, 115200);
+   
+  /* Enable Receiver and Transmitter lines */
+  USARTdrv->Control (ARM_USART_CONTROL_TX, 1);
+  USARTdrv->Control (ARM_USART_CONTROL_RX, 1);
+   
+  while (1)
+  {
+    osThreadFlagsWait (0x01, osFlagsWaitAny, osWaitForever); 
+    
+    USARTdrv->Send("Now Thread ---------> 9.\r\n", 30);
+    USARTdrv->Send("Now the CH info is:\r\n", 30);
+    USARTdrv->Send(duty_buf, 24);
+    USARTdrv->Send("\r\n", 5);
+    Driver_USART1.Send(buf_from_usb, 30);
+    
+    osThreadYield();
+  }
+}
+    
+int init_tty_thread (void) {
+ 
+  tid_tty = osThreadNew (tty, NULL, NULL);
+  if (!tid_tty) return(-1);
+  
+  return(0);
+}
+
 

@@ -20,8 +20,6 @@
         #define RTE_CMSIS_RTOS_RTX5             /* CMSIS-RTOS Keil RTX5 */
 #define RTE_CMSIS_RTOS2                 /* CMSIS-RTOS2 */
         #define RTE_CMSIS_RTOS2_RTX5            /* CMSIS-RTOS2 Keil RTX5 */
-#define RTE_Compiler_EventRecorder
-          #define RTE_Compiler_EventRecorder_DAP
 #define RTE_Drivers_USART1              /* Driver USART1 */
         #define RTE_Drivers_USART2              /* Driver USART2 */
         #define RTE_Drivers_USART3              /* Driver USART3 */
