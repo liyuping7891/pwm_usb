@@ -202,7 +202,7 @@ static void parse_cmd(void *argument)
 //    SEGGER_RTT_Write(0, buf_from_usb, 24 + 1);
 //    SEGGER_RTT_printf(0,"\n");
         
-    if((cmd_type ^ PWM_GEN_CMD) == 0)
+    if(cmd_type == PWM_GEN_CMD)
     {
       duty_buf[0] = TIM2->CCR1;
       duty_buf[1] = TIM2->CCR2;
@@ -241,7 +241,7 @@ static void parse_cmd(void *argument)
       }       
       osThreadFlagsSet(tid_pwm_process, PWM_CTL_THROUGH_USB_CONFIRM); 
     }
-    else if((cmd_type ^ FREQ_GEN_CMD) == 0)
+    else if(cmd_type == FREQ_GEN_CMD)
     {
       
       osThreadFlagsSet(tid_freq_gen, FREQ_CTL_THROUGH_USB_CONFIRM);
@@ -342,7 +342,7 @@ static void tty(void *argument)
                     ARM_USART_DATA_BITS_8 |
                     ARM_USART_PARITY_NONE |
                     ARM_USART_STOP_BITS_1 |
-                    ARM_USART_FLOW_CONTROL_NONE, 115200);
+                    ARM_USART_FLOW_CONTROL_NONE, 921600);
    
   /* Enable Receiver and Transmitter lines */
   USARTdrv->Control (ARM_USART_CONTROL_TX, 1);
